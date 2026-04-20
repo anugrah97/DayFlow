@@ -1237,3 +1237,512 @@ No required field is `undefined` or missing from any event object.
 | API Contract | 7 | 2 | 0 | 9 |
 | Regression | 5 | 0 | 0 | 5 |
 | **Total** | **36** | **11** | **3** | **50** |
+
+---
+
+## Sprint 3 — Task Management & Drag-and-Drop
+
+> **Sprint 3 Coverage:** US-005 (Task CRUD), US-006 (Drag-and-Drop Scheduling), US-007 (Conflict Detection)
+> **Test Cases:** TC-FUNC-051 – TC-FUNC-075
+> **Sprint:** Sprint 3
+
+---
+
+## US-005 — Task CRUD & Persistence
+
+> **User Story:** As a user, I want to add, edit, and delete tasks so that I can manage my to-do list and have it persist across page refreshes.
+
+---
+
+### TC-FUNC-051: Add task with valid inputs
+
+**User Story:** US-005
+**Type:** Positive
+**Priority:** P1
+**Precondition:** User is authenticated and on `/dashboard/calendar`. Task panel is visible on the left.
+**Test Data:** Title: "Write sprint report", Duration: 30 min, Priority: High.
+
+**Steps:**
+1. Click the "+ Add Task" button in the Task Panel.
+2. Enter "Write sprint report" in the title field.
+3. Select "30 min" from the duration dropdown.
+4. Select "High" from the priority dropdown.
+5. Click "Add Task".
+
+**Expected Result:** A new task "Write sprint report" appears in the task list with a red priority border (High), showing "30 min" duration. The form clears and collapses.
+
+**Acceptance Criterion:** Task appears in list immediately after submission; form resets after submission.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-052: Add task — title validation (empty)
+
+**User Story:** US-005
+**Type:** Negative
+**Priority:** P1
+**Precondition:** Task panel is open with the Add Task form visible.
+**Test Data:** Title: "" (empty), Duration: 30, Priority: Medium.
+
+**Steps:**
+1. Leave the title field blank.
+2. Set duration to 30 min and priority to Medium.
+3. Click "Add Task".
+
+**Expected Result:** Form does not submit. An error message or visual indicator appears on the title field indicating it is required. No task is added to the list.
+
+**Acceptance Criterion:** Empty title is rejected; validation message shown.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-053: Task persists after page refresh (localStorage)
+
+**User Story:** US-005
+**Type:** Positive
+**Priority:** P1
+**Precondition:** At least one task "Write sprint report" has been added to the task list.
+
+**Steps:**
+1. Verify "Write sprint report" is visible in the task panel.
+2. Hard-refresh the browser (Cmd+Shift+R / Ctrl+Shift+R).
+3. Wait for the page to fully reload.
+4. Inspect the task panel.
+
+**Expected Result:** "Write sprint report" still appears in the task panel after refresh. No data loss. `localStorage` key `dayflow-planner` contains the task data.
+
+**Acceptance Criterion:** Tasks persist across page refreshes via localStorage.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-054: Edit task — update title and duration
+
+**User Story:** US-005
+**Type:** Positive
+**Priority:** P2
+**Precondition:** Task "Write sprint report" exists in the task panel.
+
+**Steps:**
+1. Click the edit (pencil) icon on "Write sprint report".
+2. Change the title to "Finalize sprint report".
+3. Change duration from 30 to 60 min.
+4. Save the changes.
+
+**Expected Result:** Task title updates to "Finalize sprint report" and duration updates to 60 min. Change is reflected immediately in the UI and persists after refresh.
+
+**Acceptance Criterion:** Edited task values are saved to store and localStorage.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-055: Delete task removes it from list and localStorage
+
+**User Story:** US-005
+**Type:** Positive
+**Priority:** P1
+**Precondition:** Task "Finalize sprint report" exists in the task panel.
+
+**Steps:**
+1. Click the delete icon on "Finalize sprint report".
+2. Confirm the deletion if a confirmation prompt appears.
+3. Inspect the task panel.
+4. Refresh the page and re-inspect.
+
+**Expected Result:** Task is removed from the list immediately. After refresh, task is still absent. `localStorage` key `dayflow-planner` no longer contains this task.
+
+**Acceptance Criterion:** Deleted tasks are removed from store and localStorage permanently.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-056: Multiple tasks — priority ordering (unscheduled first)
+
+**User Story:** US-005
+**Type:** Positive
+**Priority:** P2
+**Precondition:** Three tasks exist: one High, one Medium, one Low priority. None are scheduled.
+
+**Steps:**
+1. Navigate to `/dashboard/calendar`.
+2. Observe the order of tasks in the task panel.
+
+**Expected Result:** Unscheduled tasks appear above scheduled tasks. Within each group, the order is: High priority → Medium → Low (or the user-defined insertion order per the store's `reorderTasks` logic).
+
+**Acceptance Criterion:** Unscheduled tasks listed before scheduled tasks in the panel.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-057: Zustand store — scheduleTask updates scheduledAt field
+
+**User Story:** US-005/006
+**Type:** Unit-level Functional
+**Priority:** P1
+**Precondition:** Zustand store has a task with `id: "t1"` and `scheduledAt: null`.
+**Test Data:** `scheduleTask("t1", "2026-04-20T09:00:00.000Z")`
+
+**Steps:**
+1. Call `scheduleTask("t1", "2026-04-20T09:00:00.000Z")` on the Zustand store.
+2. Read the task from the store.
+
+**Expected Result:** `task.scheduledAt === "2026-04-20T09:00:00.000Z"`. localStorage is updated immediately.
+
+**Acceptance Criterion:** `scheduleTask` sets `scheduledAt` on the correct task by id.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-058: Zustand store — unscheduleTask clears scheduledAt
+
+**User Story:** US-005/006
+**Type:** Unit-level Functional
+**Priority:** P1
+**Precondition:** Task `id: "t1"` has `scheduledAt: "2026-04-20T09:00:00.000Z"`.
+
+**Steps:**
+1. Call `unscheduleTask("t1")` on the Zustand store.
+2. Read the task from the store.
+
+**Expected Result:** `task.scheduledAt === null` (or `undefined`). The task disappears from the calendar and reappears in the unscheduled section of the task panel.
+
+**Acceptance Criterion:** `unscheduleTask` sets `scheduledAt` to null for the correct task.
+
+**Sprint:** Sprint 3
+
+---
+
+## US-006 — Drag-and-Drop Scheduling
+
+> **User Story:** As a user, I want to drag a task from the task list and drop it onto a calendar time slot to schedule it for that time.
+
+---
+
+### TC-FUNC-059: Drag task to empty time slot — schedules successfully
+
+**User Story:** US-006
+**Type:** Positive
+**Priority:** P1
+**Precondition:** Task "Write sprint report" is unscheduled. The 9:00 AM slot is free (no Google Calendar event).
+
+**Steps:**
+1. Hover over the "Write sprint report" task card. Observe the drag handle/cursor change.
+2. Drag the task card to the 9:00 AM slot on the calendar.
+3. Release (drop).
+
+**Expected Result:** A `ScheduledTaskBlock` appears at the 9:00 AM position on the calendar. The task disappears from the unscheduled section of the task panel. The Zustand store has `scheduledAt` set to the 9:00 AM ISO time for this task.
+
+**Acceptance Criterion:** Dropped task appears on calendar at correct time; removed from unscheduled panel section.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-060: Scheduled task block positioned correctly by time
+
+**User Story:** US-006
+**Type:** Positive
+**Priority:** P1
+**Precondition:** Task "Write sprint report" has been dropped onto the 9:00 AM slot. `GRID_START_HOUR = 7`, `HOUR_HEIGHT = 80`.
+
+**Steps:**
+1. Inspect the rendered `ScheduledTaskBlock` for "Write sprint report".
+2. Check the CSS `top` value.
+3. Compute expected: `((9-7) * 60 + 0) / 60 * 80 = 160px`.
+
+**Expected Result:** The block's `top` CSS value equals `160px`. Duration of 30 min → `height = (30/60)*80 = 40px`.
+
+**Acceptance Criterion:** Scheduled task block uses the same positioning formula as `EventBlock`.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-061: Unschedule task via × button
+
+**User Story:** US-006
+**Type:** Positive
+**Priority:** P1
+**Precondition:** Task "Write sprint report" is scheduled at 9:00 AM and visible on the calendar as a `ScheduledTaskBlock`.
+
+**Steps:**
+1. Hover over the `ScheduledTaskBlock` for "Write sprint report".
+2. Click the × (unschedule) button.
+
+**Expected Result:** The `ScheduledTaskBlock` is removed from the calendar. "Write sprint report" reappears in the unscheduled task panel section. `scheduledAt` is null in the store.
+
+**Acceptance Criterion:** × button unschedules task and restores it to the task panel.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-062: Drop on same slot twice — no duplicate blocks
+
+**User Story:** US-006
+**Type:** Edge Case
+**Priority:** P2
+**Precondition:** Task "Write sprint report" has already been scheduled at 9:00 AM.
+
+**Steps:**
+1. Attempt to drag the same task (now in the scheduled section) and drop onto 9:00 AM again.
+
+**Expected Result:** No duplicate `ScheduledTaskBlock` appears. Either the task does not move (same slot) or the existing schedule is preserved without creating a second block.
+
+**Acceptance Criterion:** No duplicate task blocks on calendar.
+
+**Sprint:** Sprint 3
+
+---
+
+## US-007 — Conflict Detection
+
+> **User Story:** As a user, I want to be warned if I schedule a task that conflicts with an existing calendar event, so I don't accidentally double-book myself.
+
+---
+
+### TC-FUNC-063: Drop task on slot occupied by Google Calendar event — conflict toast shown
+
+**User Story:** US-007
+**Type:** Positive
+**Priority:** P1
+**Precondition:** Google Calendar has a meeting "Standup" from 10:00–10:30 AM. Task "Write sprint report" is unscheduled.
+
+**Steps:**
+1. Drag "Write sprint report" and drop it onto the 10:00 AM slot.
+
+**Expected Result:** A conflict toast notification appears reading "Conflicts with Standup at 10:00 AM" (or similar). The task is still scheduled (user is warned, not blocked). The toast is dismissible.
+
+**Acceptance Criterion:** Conflict toast appears when a task is dropped onto a slot overlapping a calendar event; toast is dismissible.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-064: Conflict toast auto-dismisses after 5 seconds
+
+**User Story:** US-007
+**Type:** Positive
+**Priority:** P2
+**Precondition:** A conflict toast is currently displayed after a conflicting drop.
+
+**Steps:**
+1. Trigger a conflict by dropping a task on an event-occupied slot.
+2. Do not dismiss the toast manually.
+3. Wait 5 seconds.
+
+**Expected Result:** Toast disappears automatically after 5 seconds without user interaction.
+
+**Acceptance Criterion:** ConflictToast auto-dismisses after 5 seconds.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-065: Drop task on free slot — no conflict toast
+
+**User Story:** US-007
+**Type:** Negative
+**Priority:** P1
+**Precondition:** The 2:00 PM slot has no Google Calendar events. Task "Write sprint report" is unscheduled.
+
+**Steps:**
+1. Drag "Write sprint report" and drop onto the 2:00 PM slot.
+
+**Expected Result:** Task schedules without a conflict toast. No warning appears.
+
+**Acceptance Criterion:** No false-positive conflict warnings on empty slots.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-066: Conflict detection — partial overlap (task extends into event)
+
+**User Story:** US-007
+**Type:** Edge Case
+**Priority:** P2
+**Precondition:** Google Calendar event "Design Review" runs 3:00–4:00 PM. Task "Prep slides" has a 60 min duration. User drops "Prep slides" on 2:30 PM (slot ends at 3:30 PM — overlaps Design Review by 30 min).
+
+**Steps:**
+1. Drag "Prep slides" (60 min) to the 2:30 PM slot.
+
+**Expected Result:** Conflict toast appears indicating overlap with "Design Review". Partial overlap is detected, not just exact-start conflicts.
+
+**Acceptance Criterion:** Overlap detection considers task duration, not just start time.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-067: Two sequential tasks — no false conflict between tasks
+
+**User Story:** US-007
+**Type:** Edge Case
+**Priority:** P2
+**Precondition:** Task A is scheduled at 9:00 AM (30 min). Task B is dropped at 9:30 AM (30 min). No Google Calendar events at these times.
+
+**Steps:**
+1. Drop Task A on 9:00 AM.
+2. Drop Task B on 9:30 AM.
+
+**Expected Result:** Neither drop triggers a conflict toast. Sequential tasks do not conflict with each other (conflict detection is only against Google Calendar events, not other tasks).
+
+**Acceptance Criterion:** Task-to-task adjacent scheduling does not trigger conflict warnings.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-068: Conflict detection — task dropped exactly at event end time (no conflict)
+
+**User Story:** US-007
+**Type:** Edge Case
+**Priority:** P3
+**Precondition:** Google Calendar event "Standup" ends at 10:30 AM. Task dropped at 10:30 AM.
+
+**Steps:**
+1. Drag any task to the 10:30 AM slot.
+
+**Expected Result:** No conflict toast. A task starting exactly at an event's end time does not conflict.
+
+**Acceptance Criterion:** Boundary condition — task at event end = no conflict (exclusive end time check).
+
+**Sprint:** Sprint 3
+
+---
+
+## Regression Suite — Sprint 3
+
+### TC-FUNC-069: Sprint 1 auth flow unaffected after Sprint 3 changes
+
+**Type:** Regression
+**Priority:** P1
+**Steps:** Sign in with Google → verify session, redirect to /dashboard/calendar.
+**Expected Result:** Auth flow works as before. No regressions from DndContext wrapper or "use client" conversion of calendar page.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-070: Sprint 2 calendar events still render after Sprint 3 changes
+
+**Type:** Regression
+**Priority:** P1
+**Steps:** After Sprint 3 deployment, verify Google Calendar events still appear on the TimeGrid.
+**Expected Result:** EventBlocks render at correct positions. SWR auto-refresh still works. No layout regressions from TaskPanel addition.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-071: localStorage key `dayflow-planner` stores correct schema
+
+**Type:** Regression
+**Priority:** P2
+**Steps:** Add a task, open browser DevTools → Application → Local Storage → `dayflow-planner`.
+**Expected Result:** JSON contains `{ state: { tasks: [...] }, version: 0 }` (Zustand persist schema). Each task has `id`, `title`, `duration`, `priority`, `scheduledAt` (nullable).
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-072: No duplicate task IDs after multiple add operations
+
+**Type:** Regression / Edge Case
+**Priority:** P2
+**Steps:** Add 5 tasks in rapid succession using the form.
+**Expected Result:** All 5 tasks have unique `id` values. No rendering key conflicts in React.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-073: DndContext does not break calendar event click/hover interactions
+
+**Type:** Regression
+**Priority:** P2
+**Steps:** With DndContext active on the page, hover over a Google Calendar EventBlock.
+**Expected Result:** Event hover state works normally. No pointer-events interference from DnD layer.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-074: Task panel visible on mobile viewport (≥375px width)
+
+**Type:** Regression / Responsive
+**Priority:** P2
+**Steps:** Set browser width to 375px. Navigate to /dashboard/calendar.
+**Expected Result:** Task panel is either visible (scrollable) or a toggle mechanism shows/hides it. No horizontal overflow.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-FUNC-075: Scheduled tasks survive auth token refresh
+
+**Type:** Regression / Integration
+**Priority:** P1
+**Steps:** Schedule 2 tasks. Force token refresh (wait for expiry or mock). Reload.
+**Expected Result:** Scheduled tasks still on calendar (localStorage survives token refresh). No data loss.
+
+**Sprint:** Sprint 3
+
+---
+
+## Updated Summary Table (Sprint 3 additions)
+
+| Test Case | Title | User Story | Type | Priority | Sprint |
+|-----------|-------|------------|------|----------|--------|
+| TC-FUNC-051 | Add task with valid inputs | US-005 | Positive | P1 | Sprint 3 |
+| TC-FUNC-052 | Add task — title validation (empty) | US-005 | Negative | P1 | Sprint 3 |
+| TC-FUNC-053 | Task persists after page refresh | US-005 | Positive | P1 | Sprint 3 |
+| TC-FUNC-054 | Edit task — update title and duration | US-005 | Positive | P2 | Sprint 3 |
+| TC-FUNC-055 | Delete task removes from list and localStorage | US-005 | Positive | P1 | Sprint 3 |
+| TC-FUNC-056 | Multiple tasks — priority ordering | US-005 | Positive | P2 | Sprint 3 |
+| TC-FUNC-057 | scheduleTask updates scheduledAt | US-005/006 | Functional | P1 | Sprint 3 |
+| TC-FUNC-058 | unscheduleTask clears scheduledAt | US-005/006 | Functional | P1 | Sprint 3 |
+| TC-FUNC-059 | Drag task to empty slot — schedules | US-006 | Positive | P1 | Sprint 3 |
+| TC-FUNC-060 | Scheduled block positioned correctly | US-006 | Positive | P1 | Sprint 3 |
+| TC-FUNC-061 | Unschedule via × button | US-006 | Positive | P1 | Sprint 3 |
+| TC-FUNC-062 | Drop same slot twice — no duplicate | US-006 | Edge Case | P2 | Sprint 3 |
+| TC-FUNC-063 | Conflict toast on occupied slot | US-007 | Positive | P1 | Sprint 3 |
+| TC-FUNC-064 | Conflict toast auto-dismisses (5s) | US-007 | Positive | P2 | Sprint 3 |
+| TC-FUNC-065 | Free slot drop — no conflict toast | US-007 | Negative | P1 | Sprint 3 |
+| TC-FUNC-066 | Partial overlap detected | US-007 | Edge Case | P2 | Sprint 3 |
+| TC-FUNC-067 | Sequential tasks — no false conflict | US-007 | Edge Case | P2 | Sprint 3 |
+| TC-FUNC-068 | Task at event end — no conflict | US-007 | Edge Case | P3 | Sprint 3 |
+| TC-FUNC-069 | Sprint 1 auth unaffected | Regression | Regression | P1 | Sprint 3 |
+| TC-FUNC-070 | Sprint 2 calendar events still render | Regression | Regression | P1 | Sprint 3 |
+| TC-FUNC-071 | localStorage schema correct | Regression | Regression | P2 | Sprint 3 |
+| TC-FUNC-072 | No duplicate task IDs | Regression | Edge Case | P2 | Sprint 3 |
+| TC-FUNC-073 | DndContext no pointer-events interference | Regression | Regression | P2 | Sprint 3 |
+| TC-FUNC-074 | Task panel visible on mobile | Regression | Responsive | P2 | Sprint 3 |
+| TC-FUNC-075 | Scheduled tasks survive token refresh | Regression | Integration | P1 | Sprint 3 |
+
+**Sprint 3 Total: 25 test cases (TC-FUNC-051 – TC-FUNC-075)**
+
+## Updated Coverage Matrix
+
+| User Story | P1 Cases | P2 Cases | P3 Cases | Total |
+|------------|----------|----------|----------|-------|
+| US-001 Google Sign-In | 7 | 4 | 1 | 12 |
+| US-002 Persistent Session | 5 | 0 | 1 | 6 |
+| US-003 View Today's Events | 9 | 3 | 0 | 12 |
+| US-004 Auto-Refresh | 3 | 2 | 1 | 6 |
+| US-005 Task CRUD | 5 | 2 | 0 | 7 |
+| US-006 Drag-and-Drop | 5 | 1 | 0 | 6 |
+| US-007 Conflict Detection | 3 | 3 | 1 | 7 |
+| API Contract | 7 | 2 | 0 | 9 |
+| Regression (Sprint 1–2) | 5 | 0 | 0 | 5 |
+| Regression (Sprint 3) | 3 | 5 | 0 | 8 |
+| Functional (Zustand) | 2 | 0 | 0 | 2 |
+| **Total** | **54** | **22** | **3** | **75** |

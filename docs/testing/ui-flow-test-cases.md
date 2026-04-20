@@ -1199,3 +1199,329 @@ heightPx = Math.max((durationMinutes / 60) * 80, 24)
 ```
 
 Color palette cycles by event `index` (mod 8) when no `colorId` is present.
+
+---
+
+## Sprint 3 — Task Panel & Drag-and-Drop UI Tests
+
+> **Sprint Coverage:** Sprint 3 — Task Management, Drag-and-Drop Scheduling, Conflict Toast
+> **Test Cases:** TC-UI-059 – TC-UI-075
+> **Sprint:** Sprint 3
+
+---
+
+### TC-UI-059: Task panel renders on left of calendar layout
+
+**Category:** Layout
+**Page/Component:** `/dashboard/calendar`
+**Priority:** P1
+**Precondition:** User is authenticated.
+
+**Steps:**
+1. Navigate to `/dashboard/calendar`.
+
+**Expected Result:** TaskPanel renders as a sidebar (~320px width) on the left side of the page. The TimeGrid/DayView occupies the remaining width on the right. Layout is flex row. No overflow or overlap between panel and calendar.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-060: AddTaskForm shows correct fields and defaults
+
+**Category:** Component
+**Page/Component:** `AddTaskForm.tsx`
+**Priority:** P1
+**Precondition:** User navigates to `/dashboard/calendar` and opens the AddTaskForm.
+
+**Steps:**
+1. Click "+ Add Task" to expand the form.
+2. Inspect the form fields.
+
+**Expected Result:** Form contains: (1) Title text input, (2) Duration select with options: 15, 30, 45, 60, 90, 120, 180 min, (3) Priority select with options: High, Medium, Low. Default duration is 30 min. Default priority is Medium. Submit button labeled "Add Task".
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-061: Task item shows priority border color
+
+**Category:** Component
+**Page/Component:** `TaskItem.tsx`
+**Priority:** P2
+**Precondition:** Tasks exist with all three priority levels.
+
+**Steps:**
+1. Observe tasks in the panel with High, Medium, Low priorities.
+
+**Expected Result:**
+- High priority: Red left border (e.g., `border-l-4 border-red-500`)
+- Medium priority: Yellow left border (`border-yellow-500`)
+- Low priority: Green left border (`border-green-500`)
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-062: Task item shows edit and delete icons
+
+**Category:** Component
+**Page/Component:** `TaskItem.tsx`
+**Priority:** P2
+**Precondition:** At least one task exists in the panel.
+
+**Steps:**
+1. Hover over a task item in the task panel.
+2. Observe action icons.
+
+**Expected Result:** Edit (pencil) and delete (trash) icons are visible on the task card. Icons are accessible via keyboard tab focus.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-063: Edit mode — inline form appears on pencil click
+
+**Category:** Interaction
+**Page/Component:** `TaskItem.tsx`
+**Priority:** P2
+**Precondition:** Task "Write sprint report" exists.
+
+**Steps:**
+1. Click the pencil icon on the task.
+2. Observe the task item.
+
+**Expected Result:** Task card transitions to edit mode showing pre-populated input fields (title, duration, priority). A Save button and a Cancel button are present.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-064: Task panel shows empty state when no tasks exist
+
+**Category:** State
+**Page/Component:** `TaskPanel.tsx`
+**Priority:** P1
+**Precondition:** The `dayflow-planner` localStorage key is cleared or no tasks have been added.
+
+**Steps:**
+1. Clear localStorage or use a fresh browser profile.
+2. Navigate to `/dashboard/calendar`.
+
+**Expected Result:** Task panel shows an empty state message (e.g., "No tasks yet — add one below") and the "+ Add Task" form is accessible.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-065: Dragging task shows ghost/overlay preview
+
+**Category:** Interaction
+**Page/Component:** `TaskItem.tsx` + `DndContext`
+**Priority:** P2
+**Precondition:** At least one task exists in the panel.
+
+**Steps:**
+1. Initiate a drag on a task card (hold mouse down and move).
+2. Observe the original card and the dragged preview.
+
+**Expected Result:** A drag overlay/ghost preview of the task card follows the cursor. The original task card in the panel may show a placeholder or reduced opacity state.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-066: Droppable slots show visual indicator on hover during drag
+
+**Category:** Interaction
+**Page/Component:** `DroppableSlot.tsx`
+**Priority:** P2
+**Precondition:** User is actively dragging a task over the calendar.
+
+**Steps:**
+1. Drag a task over calendar time slots.
+2. Observe visual feedback on slots as the drag passes over them.
+
+**Expected Result:** The hovered droppable slot shows a visual highlight (e.g., background color change, dashed border) indicating it is a valid drop target.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-067: ScheduledTaskBlock appearance matches design
+
+**Category:** Component
+**Page/Component:** `ScheduledTaskBlock.tsx`
+**Priority:** P2
+**Precondition:** A task has been dropped onto a calendar slot.
+
+**Steps:**
+1. Observe the rendered `ScheduledTaskBlock` on the calendar.
+
+**Expected Result:** Block has: dashed violet/purple border, task title visible, duration shown, × button in top-right corner. Style is visually distinct from Google Calendar `EventBlock` (which has solid colored background).
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-068: Conflict toast visual appearance
+
+**Category:** Component
+**Page/Component:** `ConflictToast` in `calendar/page.tsx`
+**Priority:** P2
+**Precondition:** Task has been dropped on a slot occupied by a Google Calendar event.
+
+**Steps:**
+1. Drop a task on an occupied slot.
+2. Observe the conflict toast.
+
+**Expected Result:** Toast appears as a floating notification (fixed position, top or bottom of screen). Contains warning icon, conflict message naming the conflicting event, and a dismiss (×) button. Toast has a distinct warning/amber color scheme.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-069: Task moved to "Scheduled" visual section after drop
+
+**Category:** Layout
+**Page/Component:** `TaskPanel.tsx`
+**Priority:** P1
+**Precondition:** Task "Write sprint report" is unscheduled.
+
+**Steps:**
+1. Drop "Write sprint report" onto any calendar slot.
+2. Observe the task panel.
+
+**Expected Result:** "Write sprint report" moves from the "Unscheduled" section to a "Scheduled" section (or is visually distinguished as scheduled) in the task panel. The task is still visible in the panel for reference but clearly marked as scheduled.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-070: Task panel scrolls independently of calendar
+
+**Category:** Layout / Scroll
+**Page/Component:** `/dashboard/calendar`
+**Priority:** P2
+**Precondition:** More than 8 tasks exist so the panel overflows.
+
+**Steps:**
+1. Add 10+ tasks to the panel.
+2. Scroll within the task panel.
+3. Observe the calendar area.
+
+**Expected Result:** Task panel scrolls independently. Calendar timeline does not scroll when scrolling the task panel. Both scroll areas are independent.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-071: Add Task form collapses/expands on toggle
+
+**Category:** Interaction
+**Page/Component:** `TaskPanel.tsx` / `AddTaskForm.tsx`
+**Priority:** P2
+**Precondition:** Form is collapsed.
+
+**Steps:**
+1. Click "+ Add Task" to expand the form.
+2. Click the toggle/close button to collapse.
+
+**Expected Result:** Form animates open and closed. When collapsed, only the "+ Add Task" trigger button is visible. No form fields visible when collapsed.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-072: Accessibility — task items are keyboard-navigable
+
+**Category:** Accessibility
+**Page/Component:** `TaskPanel.tsx`
+**Priority:** P2
+**Precondition:** Tasks exist in the panel.
+
+**Steps:**
+1. Use Tab to focus task items.
+2. Use Enter to activate edit mode.
+3. Use Tab to reach delete button.
+
+**Expected Result:** All interactive elements (edit, delete, drag handle) are reachable via keyboard. Focus ring is visible on focused elements.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-073: ScheduledTaskBlock × button removes block from calendar
+
+**Category:** Interaction
+**Page/Component:** `ScheduledTaskBlock.tsx`
+**Priority:** P1
+**Precondition:** A ScheduledTaskBlock is visible on the calendar at 9:00 AM.
+
+**Steps:**
+1. Click the × button on the ScheduledTaskBlock.
+
+**Expected Result:** Block is removed from the calendar immediately with no layout shift or errors. Task reappears in unscheduled section of task panel.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-074: No layout shift when conflict toast appears/disappears
+
+**Category:** Layout
+**Page/Component:** `ConflictToast`
+**Priority:** P2
+**Precondition:** User is viewing `/dashboard/calendar`.
+
+**Steps:**
+1. Trigger a conflict by dropping a task on an event slot.
+2. Observe the page layout as the toast appears.
+3. Dismiss or wait for auto-dismiss and observe disappearance.
+
+**Expected Result:** Toast appears as an overlay (fixed/absolute position). Calendar and task panel do not reflow or shift when toast appears or disappears. No content displacement.
+
+**Sprint:** Sprint 3
+
+---
+
+### TC-UI-075: Responsive — task panel stacks below calendar on narrow screens
+
+**Category:** Responsive
+**Page/Component:** `/dashboard/calendar`
+**Priority:** P2
+**Precondition:** Browser width set to 768px or less.
+
+**Steps:**
+1. Set browser window to 768px width.
+2. Navigate to `/dashboard/calendar`.
+
+**Expected Result:** At tablet/mobile width, task panel stacks vertically below the calendar (or a toggle shows/hides it). No horizontal overflow. Both sections remain usable.
+
+**Sprint:** Sprint 3
+
+---
+
+## Sprint 3 Summary
+
+| Test Case | Title | Category | Priority |
+|-----------|-------|----------|----------|
+| TC-UI-059 | Task panel layout | Layout | P1 |
+| TC-UI-060 | AddTaskForm fields and defaults | Component | P1 |
+| TC-UI-061 | Priority border colors | Component | P2 |
+| TC-UI-062 | Edit/delete icons visible | Component | P2 |
+| TC-UI-063 | Edit mode inline form | Interaction | P2 |
+| TC-UI-064 | Empty state | State | P1 |
+| TC-UI-065 | Drag ghost preview | Interaction | P2 |
+| TC-UI-066 | Drop slot visual indicator | Interaction | P2 |
+| TC-UI-067 | ScheduledTaskBlock appearance | Component | P2 |
+| TC-UI-068 | Conflict toast appearance | Component | P2 |
+| TC-UI-069 | Task moves to scheduled section | Layout | P1 |
+| TC-UI-070 | Panel scrolls independently | Layout/Scroll | P2 |
+| TC-UI-071 | AddTask form toggle | Interaction | P2 |
+| TC-UI-072 | Keyboard navigation | Accessibility | P2 |
+| TC-UI-073 | × button removes block | Interaction | P1 |
+| TC-UI-074 | No layout shift on toast | Layout | P2 |
+| TC-UI-075 | Responsive stacking | Responsive | P2 |
+
+**Sprint 3 UI Total: 17 test cases (TC-UI-059 – TC-UI-075)**
+**Cumulative UI Total: 75 test cases (TC-UI-001 – TC-UI-075)**
