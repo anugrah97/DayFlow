@@ -39,7 +39,7 @@ export default function AddTaskForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 mb-4">
+    <form onSubmit={handleSubmit} aria-label="Add task form" className="space-y-2 mb-4">
       <div>
         <input
           type="text"
@@ -60,6 +60,7 @@ export default function AddTaskForm() {
 
       <div className="flex gap-2">
         <select
+          aria-label="Duration"
           value={duration}
           onChange={(e) => setDuration(Number(e.target.value))}
           className="flex-1 rounded-md border border-slate-200 px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -72,6 +73,7 @@ export default function AddTaskForm() {
         </select>
 
         <select
+          aria-label="Priority"
           value={priority}
           onChange={(e) => setPriority(e.target.value as Priority)}
           className="flex-1 rounded-md border border-slate-200 px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"

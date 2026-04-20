@@ -8,23 +8,9 @@ import DroppableSlot from "@/components/calendar/DroppableSlot"
 import ScheduledTaskBlock from "@/components/calendar/ScheduledTaskBlock"
 import TaskPanel from "@/components/planner/TaskPanel"
 import { usePlannerStore, Task } from "@/store/planner"
+import { useShallow } from "zustand/react/shallow"
 import { GRID_START_HOUR, GRID_END_HOUR, HOUR_HEIGHT } from "@/components/calendar/TimeGrid"
-
-// ---------------------------------------------------------------------------
-// Conflict detection
-// ---------------------------------------------------------------------------
-function checkConflict(task: Task, slotTime: string, events: CalendarEvent[]): string | null {
-  const taskStart = new Date(slotTime)
-  const taskEnd = new Date(taskStart.getTime() + task.duration * 60 * 1000)
-  for (const event of events) {
-    const evStart = new Date(event.start)
-    const evEnd = new Date(event.end)
-    if (taskStart < evEnd && taskEnd > evStart) {
-      return `Conflicts with "${event.title}" at ${evStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-    }
-  }
-  return null
-}
+import { checkConflict } from "@/lib/conflict"
 
 // ---------------------------------------------------------------------------
 // Build ISO slot time for today
@@ -107,7 +93,7 @@ export default function CalendarPage() {
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null)
 
-  const scheduledTasks = usePlannerStore((s) => s.tasks.filter((t) => !!t.scheduledAt))
+  const scheduledTasks = usePlannerStore(useShallow((s) => s.tasks.filter((t) => !!t.scheduledAt)))
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
