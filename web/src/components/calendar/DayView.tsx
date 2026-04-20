@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import useSWR from "swr"
 import { RefreshCw } from "lucide-react"
 import TimeGrid from "./TimeGrid"
@@ -10,6 +11,8 @@ interface EventsResponse {
   events: CalendarEvent[]
   syncedAt: string
 }
+
+export type { CalendarEvent }
 
 async function fetcher(url: string): Promise<EventsResponse> {
   const res = await fetch(url)
@@ -53,11 +56,19 @@ function LoadingSkeleton() {
   )
 }
 
-export default function DayView() {
+interface DayViewProps {
+  onEventsLoaded?: (events: CalendarEvent[]) => void
+  extraChildren?: React.ReactNode
+}
+
+export default function DayView({ onEventsLoaded, extraChildren }: DayViewProps) {
   const { data, error, isLoading, mutate } = useSWR<EventsResponse>(
     "/api/calendar/events",
     fetcher,
-    { refreshInterval: 15 * 60 * 1000 }
+    {
+      refreshInterval: 15 * 60 * 1000,
+      onSuccess: (d) => onEventsLoaded?.(d.events),
+    }
   )
 
   return (
@@ -92,38 +103,24 @@ export default function DayView() {
       {/* Loading skeleton */}
       {isLoading && !data && <LoadingSkeleton />}
 
-      {/* Empty state */}
-      {!isLoading && !error && data?.events.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-            <svg
-              className="w-6 h-6 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5"
-              />
-            </svg>
+      {/* Time grid with events (always show grid once data loaded so droppable slots work) */}
+      {data && (
+        <>
+          {!error && data.events.length === 0 && !extraChildren && (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-slate-500 font-medium">No events today</p>
+              <p className="text-slate-400 text-sm mt-1">Drop tasks onto the grid below to schedule them</p>
+            </div>
+          )}
+          <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
+            <TimeGrid>
+              {data.events.map((event, i) => (
+                <EventBlock key={event.id} event={event} index={i} />
+              ))}
+              {extraChildren}
+            </TimeGrid>
           </div>
-          <p className="text-slate-500 font-medium">No events today</p>
-          <p className="text-slate-400 text-sm mt-1">Enjoy the free time!</p>
-        </div>
-      )}
-
-      {/* Time grid with events */}
-      {data && data.events.length > 0 && (
-        <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
-          <TimeGrid>
-            {data.events.map((event, i) => (
-              <EventBlock key={event.id} event={event} index={i} />
-            ))}
-          </TimeGrid>
-        </div>
+        </>
       )}
     </div>
   )
