@@ -1,10 +1,17 @@
 "use client"
 
 import { usePlannerStore } from "@/store/planner"
+import type { ScheduleSuggestion } from "@/lib/optimization"
 import AddTaskForm from "./AddTaskForm"
+import OptimizationPanel from "./OptimizationPanel"
 import TaskItem from "./TaskItem"
 
-export default function TaskPanel() {
+interface TaskPanelProps {
+  suggestions: ScheduleSuggestion[]
+  onSuggestionsChange: (suggestions: ScheduleSuggestion[]) => void
+}
+
+export default function TaskPanel({ suggestions, onSuggestionsChange }: TaskPanelProps) {
   const tasks = usePlannerStore((s) => s.tasks)
 
   const unscheduled = tasks.filter((t) => !t.scheduledAt)
@@ -22,6 +29,11 @@ export default function TaskPanel() {
           </span>
         )}
       </div>
+
+      <OptimizationPanel
+        suggestions={suggestions}
+        onSuggestionsChange={onSuggestionsChange}
+      />
 
       {/* Add Task Form */}
       <AddTaskForm />

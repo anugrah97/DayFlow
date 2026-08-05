@@ -8,6 +8,8 @@ import DroppableSlot from "@/components/calendar/DroppableSlot"
 import ScheduledTaskBlock from "@/components/calendar/ScheduledTaskBlock"
 import TaskPanel from "@/components/planner/TaskPanel"
 import { usePlannerStore, Task } from "@/store/planner"
+import type { ScheduleSuggestion } from "@/lib/optimization"
+import SuggestedTaskBlock from "@/components/calendar/SuggestedTaskBlock"
 import { useShallow } from "zustand/react/shallow"
 import { GRID_START_HOUR, GRID_END_HOUR, HOUR_HEIGHT } from "@/components/calendar/TimeGrid"
 import { checkConflict } from "@/lib/conflict"
@@ -92,7 +94,9 @@ export default function CalendarPage() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null)
+  const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([])
 
+  const tasks = usePlannerStore((s) => s.tasks)
   const scheduledTasks = usePlannerStore(useShallow((s) => s.tasks.filter((t) => !!t.scheduledAt)))
 
   const sensors = useSensors(
@@ -131,13 +135,28 @@ export default function CalendarPage() {
       {scheduledTasks.map((task) => (
         <ScheduledTaskBlock key={task.id} task={task} />
       ))}
+      {suggestions.map((suggestion) => {
+        const task = tasks.find((t) => t.id === suggestion.taskId)
+        if (!task) return null
+        return (
+          <SuggestedTaskBlock
+            key={`suggestion-${suggestion.taskId}`}
+            task={task}
+            scheduledAt={suggestion.scheduledAt}
+            reason={suggestion.reason}
+          />
+        )
+      })}
     </>
   )
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-6 p-6 h-full">
-        <TaskPanel />
+        <TaskPanel
+          suggestions={suggestions}
+          onSuggestionsChange={setSuggestions}
+        />
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold mb-4">Today</h1>
           <DayView onEventsLoaded={handleEventsLoaded} extraChildren={extraChildren} />
