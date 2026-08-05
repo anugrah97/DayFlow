@@ -1,7 +1,7 @@
 "use client"
 
 import { Task } from "@/store/planner"
-import { GRID_START_HOUR, HOUR_HEIGHT } from "./TimeGrid"
+import { getGridBlockPosition } from "@/lib/grid-position"
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`
@@ -20,13 +20,8 @@ interface SuggestedTaskBlockProps {
 }
 
 export default function SuggestedTaskBlock({ task, scheduledAt, reason }: SuggestedTaskBlockProps) {
-  const startDate = new Date(scheduledAt)
-  const startHour = startDate.getHours()
-  const startMin = startDate.getMinutes()
-
-  const startMinutes = (startHour - GRID_START_HOUR) * 60 + startMin
-  const topPx = (startMinutes / 60) * HOUR_HEIGHT
-  const heightPx = Math.max((task.duration / 60) * HOUR_HEIGHT, 28)
+  const { topPx, heightPx, visible } = getGridBlockPosition(scheduledAt, task.duration)
+  if (!visible) return null
 
   return (
     <div

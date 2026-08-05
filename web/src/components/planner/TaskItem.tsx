@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import { useDraggable } from "@dnd-kit/core"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { useState } from "react"
 import { usePlannerStore, Task, Priority } from "@/store/planner"
 
 const DURATION_OPTIONS = [
@@ -40,9 +42,10 @@ const PRIORITY_BADGE: Record<Priority, string> = {
 
 interface TaskItemProps {
   task: Task
+  sortable?: boolean
 }
 
-export default function TaskItem({ task }: TaskItemProps) {
+export default function TaskItem({ task, sortable = true }: TaskItemProps) {
   const { updateTask, deleteTask } = usePlannerStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
@@ -50,14 +53,28 @@ export default function TaskItem({ task }: TaskItemProps) {
   const [editPriority, setEditPriority] = useState<Priority>(task.priority)
   const [titleError, setTitleError] = useState(false)
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const sortableResult = useSortable({
     id: task.id,
     data: { type: "task", task },
+    disabled: !sortable,
   })
 
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined
+  const draggableResult = useDraggable({
+    id: task.id,
+    data: { type: "task", task },
+    disabled: sortable,
+  })
+
+  const active = sortable ? sortableResult : draggableResult
+  const { attributes, listeners, setNodeRef, isDragging } = active
+  const transform = sortable ? sortableResult.transform : draggableResult.transform
+  const transition = sortable ? sortableResult.transition : undefined
+
+  const style = sortable
+    ? { transform: CSS.Transform.toString(transform), transition }
+    : transform
+      ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+      : undefined
 
   function handleDelete() {
     if (window.confirm("Delete this task?")) {
