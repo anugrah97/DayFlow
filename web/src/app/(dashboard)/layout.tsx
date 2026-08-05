@@ -1,7 +1,10 @@
-import { auth, signOut } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { Calendar } from "lucide-react"
 import Image from "next/image"
+import SessionGuard from "@/components/auth/SessionGuard"
+import SignOutButton from "@/components/auth/SignOutButton"
+import PlannerStorageSync from "@/components/planner/PlannerStorageSync"
 
 export default async function DashboardLayout({
   children,
@@ -15,7 +18,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <SessionGuard>
+      <PlannerStorageSync />
+      <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,20 +54,7 @@ export default async function DashboardLayout({
                 </span>
               </div>
 
-              {/* Sign out */}
-              <form
-                action={async () => {
-                  "use server"
-                  await signOut({ redirectTo: "/login" })
-                }}
-              >
-                <button
-                  type="submit"
-                  className="text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Sign out
-                </button>
-              </form>
+              <SignOutButton />
             </div>
           </div>
         </div>
@@ -72,6 +64,7 @@ export default async function DashboardLayout({
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
-    </div>
+      </div>
+    </SessionGuard>
   )
 }

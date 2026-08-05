@@ -22,7 +22,9 @@ async function refreshAccessToken(token: Record<string, unknown>) {
       accessTokenExpires: Math.floor(Date.now() / 1000) + refreshed.expires_in,
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "token_refresh_failed"
+    console.error("Token refresh failed:", { message })
     return { ...token, error: "RefreshAccessTokenError" }
   }
 }
@@ -42,6 +44,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
+    authorized({ auth, request }) {
+      if (request.nextUrl.pathname.startsWith("/dashboard")) {
+        return !!auth
+      }
+      return true
+    },
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token

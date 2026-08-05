@@ -135,6 +135,9 @@ web/
 ```
 
 **Auth setup pattern (src/lib/auth.ts):**
+
+> **Security note:** Do NOT forward `accessToken` to the client session. Tokens must stay server-side in the JWT only. See the current `web/src/lib/auth.ts` for the correct implementation.
+
 ```typescript
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
@@ -159,7 +162,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string
+      // DO NOT expose accessToken to the client — keep tokens server-side only.
+      if (token.error) session.error = token.error as string
       return session
     }
   }

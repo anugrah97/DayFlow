@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { usePlannerStore, Priority } from "@/store/planner"
+import { usePlannerStore, Priority, TASK_TITLE_MAX_LENGTH } from "@/store/planner"
 
 const DURATION_OPTIONS = [
   { label: "15 min", value: 15 },
@@ -44,6 +44,7 @@ export default function AddTaskForm() {
         <input
           type="text"
           value={title}
+          maxLength={TASK_TITLE_MAX_LENGTH}
           onChange={(e) => {
             setTitle(e.target.value)
             if (titleError && e.target.value.trim()) setTitleError(false)
