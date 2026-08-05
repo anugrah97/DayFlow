@@ -3,6 +3,26 @@ import { persist } from "zustand/middleware"
 
 export type Priority = "high" | "medium" | "low"
 
+export const TASK_TITLE_MAX_LENGTH = 200
+export const PLANNER_STORAGE_PREFIX = "dayflow-planner"
+
+export function getPlannerStorageKey(userId: string): string {
+  return `${PLANNER_STORAGE_PREFIX}-${userId}`
+}
+
+export function clearAllPlannerStorage(): void {
+  if (typeof window === "undefined") return
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith(PLANNER_STORAGE_PREFIX)) {
+      localStorage.removeItem(key)
+    }
+  }
+}
+
+function normalizeTitle(title: string): string {
+  return title.trim().slice(0, TASK_TITLE_MAX_LENGTH)
+}
+
 export interface Task {
   id: string
   title: string
@@ -26,10 +46,12 @@ export const usePlannerStore = create<PlannerStore>()(
     (set) => ({
       tasks: [],
       addTask: (task) => set((s) => ({
-        tasks: [...s.tasks, { ...task, id: crypto.randomUUID() }]
+        tasks: [...s.tasks, { ...task, id: crypto.randomUUID(), title: normalizeTitle(task.title) }]
       })),
       updateTask: (id, updates) => set((s) => ({
-        tasks: s.tasks.map((t) => t.id === id ? { ...t, ...updates } : t)
+        tasks: s.tasks.map((t) => t.id === id
+          ? { ...t, ...updates, ...(updates.title !== undefined ? { title: normalizeTitle(updates.title) } : {}) }
+          : t)
       })),
       deleteTask: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
       scheduleTask: (id, scheduledAt) => set((s) => ({
@@ -48,6 +70,6 @@ export const usePlannerStore = create<PlannerStore>()(
         return { tasks: items }
       }),
     }),
-    { name: "dayflow-planner" }
+    { name: PLANNER_STORAGE_PREFIX }
   )
 )

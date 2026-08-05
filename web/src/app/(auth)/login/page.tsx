@@ -1,5 +1,7 @@
 import { signIn } from "@/lib/auth"
 import { Calendar, Sparkles, CheckSquare } from "lucide-react"
+import { Suspense } from "react"
+import LoginAlerts from "./LoginAlerts"
 
 export default function LoginPage() {
   return (
@@ -16,6 +18,9 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow-2xl">
+          <Suspense fallback={null}>
+            <LoginAlerts />
+          </Suspense>
           {/* Feature highlights */}
           <div className="space-y-3 mb-8">
             <div className="flex items-start gap-3">

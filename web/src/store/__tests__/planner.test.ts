@@ -25,6 +25,13 @@ describe("addTask", () => {
     const ids = result.current.tasks.map((t) => t.id)
     expect(new Set(ids).size).toBe(5)
   })
+
+  it("truncates titles longer than the max length", () => {
+    const { result } = renderHook(() => usePlannerStore())
+    const longTitle = "x".repeat(250)
+    act(() => result.current.addTask({ ...BASE_TASK, title: longTitle }))
+    expect(result.current.tasks[0].title).toHaveLength(200)
+  })
 })
 
 describe("updateTask", () => {
