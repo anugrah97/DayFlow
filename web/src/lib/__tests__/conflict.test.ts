@@ -10,6 +10,7 @@ const makeEvent = (startIso: string, endIso: string, title = "Meeting"): Calenda
   start: startIso,
   end: endIso,
   attendeeCount: 0,
+  allDay: false,
 })
 
 describe("checkConflict", () => {
@@ -53,5 +54,23 @@ describe("checkConflict", () => {
     const event = makeEvent("2026-04-20T09:00:00.000Z", "2026-04-20T10:00:00.000Z", "Design Review")
     const result = checkConflict(task, "2026-04-20T09:00:00.000Z", [event])
     expect(result).toContain("Design Review")
+  })
+
+  it("detects overlap with another scheduled task", () => {
+    const other: Task = {
+      id: "t2",
+      title: "Email client",
+      duration: 30,
+      priority: "low",
+      scheduledAt: "2026-04-20T10:00:00.000Z",
+    }
+    const result = checkConflict(task, "2026-04-20T10:15:00.000Z", [], [other], task.id)
+    expect(result).toContain("Email client")
+  })
+
+  it("ignores all-day calendar events for timed slot conflicts", () => {
+    const allDay = makeEvent("2026-04-20", "2026-04-21", "Holiday")
+    allDay.allDay = true
+    expect(checkConflict(task, "2026-04-20T10:00:00.000Z", [allDay])).toBeNull()
   })
 })

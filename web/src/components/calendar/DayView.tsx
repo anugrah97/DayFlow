@@ -2,6 +2,7 @@
 
 import React from "react"
 import useSWR from "swr"
+import Link from "next/link"
 import { RefreshCw } from "lucide-react"
 import TimeGrid from "./TimeGrid"
 import EventBlock from "./EventBlock"
@@ -14,11 +15,22 @@ interface EventsResponse {
 
 export type { CalendarEvent }
 
+class CalendarFetchError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "CalendarFetchError"
+    this.status = status
+  }
+}
+
 async function fetcher(url: string): Promise<EventsResponse> {
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? "Failed to fetch events")
+    const message = body.error ?? "Failed to fetch events"
+    throw new CalendarFetchError(message, res.status)
   }
   return res.json()
 }
@@ -56,6 +68,25 @@ function LoadingSkeleton() {
   )
 }
 
+function AllDayEventsBanner({ events }: { events: CalendarEvent[] }) {
+  if (events.length === 0) return null
+
+  return (
+    <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+        All day
+      </p>
+      <ul className="space-y-1">
+        {events.map((event) => (
+          <li key={event.id} className="text-sm font-medium text-slate-800">
+            {event.title}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 interface DayViewProps {
   onEventsLoaded?: (events: CalendarEvent[]) => void
   extraChildren?: React.ReactNode
@@ -71,16 +102,22 @@ export default function DayView({ onEventsLoaded, extraChildren }: DayViewProps)
     }
   )
 
+  const timedEvents = data?.events.filter((e) => !e.allDay) ?? []
+  const allDayEvents = data?.events.filter((e) => e.allDay) ?? []
+  const showGrid = Boolean(data || error || !isLoading)
+  const isUnauthorized = error instanceof CalendarFetchError && error.status === 401
+
   return (
     <div className="w-full">
-      {/* Header bar: sync status + refresh button */}
       <div className="flex items-center justify-between mb-4 min-h-[28px]">
         {data?.syncedAt ? (
           <span className="text-xs text-slate-400">
             Last synced: {formatSyncedAt(data.syncedAt)}
           </span>
         ) : (
-          <span className="text-xs text-slate-300">Syncing…</span>
+          <span className="text-xs text-slate-300">
+            {isLoading ? "Syncing…" : "Calendar unavailable"}
+          </span>
         )}
         <button
           onClick={() => mutate()}
@@ -93,28 +130,35 @@ export default function DayView({ onEventsLoaded, extraChildren }: DayViewProps)
         </button>
       </div>
 
-      {/* Error state */}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-4">
           <span className="font-medium">Could not load events:</span> {error.message}
+          {isUnauthorized && (
+            <p className="mt-2">
+              <Link href="/login?error=SessionExpired" className="font-medium underline hover:text-red-800">
+                Sign in again
+              </Link>
+            </p>
+          )}
         </div>
       )}
 
-      {/* Loading skeleton */}
-      {isLoading && !data && <LoadingSkeleton />}
+      {isLoading && !data && !error && <LoadingSkeleton />}
 
-      {/* Time grid with events (always show grid once data loaded so droppable slots work) */}
-      {data && (
+      {showGrid && (
         <>
-          {!error && data.events.length === 0 && !extraChildren && (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-slate-500 font-medium">No events today</p>
+          <AllDayEventsBanner events={allDayEvents} />
+
+          {!error && timedEvents.length === 0 && allDayEvents.length === 0 && !extraChildren && (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <p className="text-slate-500 font-medium">No timed events today</p>
               <p className="text-slate-400 text-sm mt-1">Drop tasks onto the grid below to schedule them</p>
             </div>
           )}
+
           <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
             <TimeGrid>
-              {data.events.map((event, i) => (
+              {timedEvents.map((event, i) => (
                 <EventBlock key={event.id} event={event} index={i} />
               ))}
               {extraChildren}

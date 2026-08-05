@@ -13,6 +13,7 @@ import SuggestedTaskBlock from "@/components/calendar/SuggestedTaskBlock"
 import { useShallow } from "zustand/react/shallow"
 import { GRID_START_HOUR, GRID_END_HOUR, HOUR_HEIGHT } from "@/components/calendar/TimeGrid"
 import { checkConflict } from "@/lib/conflict"
+import { isWithinGridHours } from "@/lib/grid-position"
 
 // ---------------------------------------------------------------------------
 // Build ISO slot time for today
@@ -70,7 +71,7 @@ function ConflictToast({ message, onDismiss }: ConflictToastProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-amber-800">Scheduling Conflict</p>
+        <p className="text-sm font-medium text-amber-800">Task scheduled with conflict</p>
         <p className="text-sm text-amber-700 mt-0.5">{message}</p>
       </div>
       <button
@@ -107,6 +108,19 @@ export default function CalendarPage() {
     setCalendarEvents(events)
   }, [])
 
+  function scheduleTaskAtSlot(task: Task, slotTime: string) {
+    if (!isWithinGridHours(slotTime, task.duration)) {
+      setConflictWarning("Tasks can only be scheduled between 7:00 AM and 10:00 PM.")
+      return
+    }
+
+    const conflict = checkConflict(task, slotTime, calendarEvents, scheduledTasks, task.id)
+    if (conflict) {
+      setConflictWarning(conflict)
+    }
+    usePlannerStore.getState().scheduleTask(task.id, slotTime)
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveDragTask(null)
@@ -115,13 +129,15 @@ export default function CalendarPage() {
     const task = active.data.current?.task as Task | undefined
     const slotTime = over.data.current?.slotTime as string | undefined
 
-    if (!task || !slotTime) return
-
-    const conflict = checkConflict(task, slotTime, calendarEvents)
-    if (conflict) {
-      setConflictWarning(conflict)
+    if (task && slotTime) {
+      scheduleTaskAtSlot(task, slotTime)
+      return
     }
-    usePlannerStore.getState().scheduleTask(task.id, slotTime)
+
+    const overTask = over.data.current?.task as Task | undefined
+    if (task && overTask && active.id !== over.id) {
+      usePlannerStore.getState().reorderTasks(String(active.id), String(over.id))
+    }
   }
 
   function handleDragStart(event: { active: { data: { current?: { task?: Task } } } }) {

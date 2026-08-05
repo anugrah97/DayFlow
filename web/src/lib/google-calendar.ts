@@ -6,6 +6,7 @@ export interface CalendarEvent {
   start: string        // ISO string
   end: string          // ISO string
   attendeeCount: number
+  allDay?: boolean
   colorId?: string
   location?: string
 }
@@ -33,6 +34,7 @@ export async function getTodaysEvents(accessToken: string): Promise<CalendarEven
     start: event.start?.dateTime ?? event.start?.date ?? "",
     end: event.end?.dateTime ?? event.end?.date ?? "",
     attendeeCount: event.attendees?.length ?? 0,
+    allDay: !event.start?.dateTime,
     colorId: event.colorId ?? undefined,
     location: event.location ?? undefined,
   }))

@@ -1,7 +1,6 @@
 import { CalendarEvent } from "@/lib/google-calendar"
-import { GRID_START_HOUR, HOUR_HEIGHT } from "./TimeGrid"
+import { getGridBlockPosition } from "@/lib/grid-position"
 
-// Color palette for events (cycles by index, or maps colorId)
 const COLOR_PALETTE = [
   { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-900", dot: "bg-blue-500" },
   { bg: "bg-violet-100", border: "border-violet-400", text: "text-violet-900", dot: "bg-violet-500" },
@@ -13,19 +12,8 @@ const COLOR_PALETTE = [
   { bg: "bg-indigo-100", border: "border-indigo-400", text: "text-indigo-900", dot: "bg-indigo-500" },
 ]
 
-// Map Google Calendar colorId (1–11) to palette entries
 const COLOR_ID_MAP: Record<string, number> = {
-  "1": 0,  // Lavender → blue
-  "2": 2,  // Sage → emerald
-  "3": 2,  // Grape → emerald
-  "4": 4,  // Flamingo → rose
-  "5": 3,  // Banana → amber
-  "6": 5,  // Tangerine → cyan
-  "7": 2,  // Peacock → emerald
-  "8": 0,  // Blueberry → blue
-  "9": 2,  // Basil → emerald
-  "10": 4, // Tomato → rose
-  "11": 3, // Graphite → amber
+  "1": 0, "2": 2, "3": 2, "4": 4, "5": 3, "6": 5, "7": 2, "8": 0, "9": 2, "10": 4, "11": 3,
 }
 
 function formatTimeRange(start: string, end: string): string {
@@ -43,33 +31,28 @@ function formatTimeRange(start: string, end: string): string {
   return `${fmt(s)} – ${fmt(e)}`
 }
 
+function getEventDurationMinutes(start: string, end: string): number {
+  const startMs = new Date(start).getTime()
+  const endMs = new Date(end).getTime()
+  return Math.max(Math.round((endMs - startMs) / 60_000), 15)
+}
+
 interface EventBlockProps {
   event: CalendarEvent
   index: number
 }
 
 export default function EventBlock({ event, index }: EventBlockProps) {
-  // Parse start and end times
-  const startDate = new Date(event.start)
-  const endDate = new Date(event.end)
+  if (event.allDay) return null
 
-  const startHour = startDate.getHours()
-  const startMin = startDate.getMinutes()
-  const endHour = endDate.getHours()
-  const endMin = endDate.getMinutes()
+  const durationMinutes = getEventDurationMinutes(event.start, event.end)
+  const { topPx, heightPx, visible } = getGridBlockPosition(event.start, durationMinutes)
+  if (!visible) return null
 
-  // Positioning formula
-  const startMinutes = (startHour - GRID_START_HOUR) * 60 + startMin
-  const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin)
-  const topPx = (startMinutes / 60) * HOUR_HEIGHT
-  const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 24)
-
-  // Pick color
   const colorIndex = event.colorId
     ? (COLOR_ID_MAP[event.colorId] ?? index % COLOR_PALETTE.length)
     : index % COLOR_PALETTE.length
   const color = COLOR_PALETTE[colorIndex]
-
   const isShort = heightPx < 40
 
   return (
