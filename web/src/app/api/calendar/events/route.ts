@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   const rateLimitKey = `calendar:${token.sub ?? "unknown"}`
-  const limit = rateLimit(rateLimitKey, RATE_LIMIT, RATE_WINDOW_MS)
+  const limit = await rateLimit(rateLimitKey, RATE_LIMIT, RATE_WINDOW_MS)
   if (!limit.success) {
     return NextResponse.json(
       { error: "Too many requests" },

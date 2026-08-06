@@ -4,7 +4,7 @@ import { Calendar } from "lucide-react"
 import Image from "next/image"
 import SessionGuard from "@/components/auth/SessionGuard"
 import SignOutButton from "@/components/auth/SignOutButton"
-import PlannerStorageSync from "@/components/planner/PlannerStorageSync"
+import PlannerStorageGate from "@/components/planner/PlannerStorageGate"
 
 export default async function DashboardLayout({
   children,
@@ -19,7 +19,6 @@ export default async function DashboardLayout({
 
   return (
     <SessionGuard>
-      <PlannerStorageSync />
       <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
@@ -62,7 +61,7 @@ export default async function DashboardLayout({
 
       {/* Main content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+        <PlannerStorageGate>{children}</PlannerStorageGate>
       </main>
       </div>
     </SessionGuard>

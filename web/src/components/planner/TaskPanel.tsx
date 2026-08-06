@@ -3,6 +3,7 @@
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { usePlannerStore } from "@/store/planner"
 import type { ScheduleSuggestion } from "@/lib/optimization"
+import type { CalendarEvent } from "@/lib/google-calendar"
 import AddTaskForm from "./AddTaskForm"
 import OptimizationPanel from "./OptimizationPanel"
 import TaskItem from "./TaskItem"
@@ -10,9 +11,16 @@ import TaskItem from "./TaskItem"
 interface TaskPanelProps {
   suggestions: ScheduleSuggestion[]
   onSuggestionsChange: (suggestions: ScheduleSuggestion[]) => void
+  calendarEvents: CalendarEvent[]
+  onConflictWarning: (message: string) => void
 }
 
-export default function TaskPanel({ suggestions, onSuggestionsChange }: TaskPanelProps) {
+export default function TaskPanel({
+  suggestions,
+  onSuggestionsChange,
+  calendarEvents,
+  onConflictWarning,
+}: TaskPanelProps) {
   const tasks = usePlannerStore((s) => s.tasks)
 
   const unscheduled = tasks.filter((t) => !t.scheduledAt)
@@ -33,6 +41,8 @@ export default function TaskPanel({ suggestions, onSuggestionsChange }: TaskPane
       <OptimizationPanel
         suggestions={suggestions}
         onSuggestionsChange={onSuggestionsChange}
+        calendarEvents={calendarEvents}
+        onConflictWarning={onConflictWarning}
       />
 
       {/* Add Task Form */}

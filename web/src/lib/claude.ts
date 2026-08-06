@@ -6,7 +6,7 @@ import {
   parseOptimizeResponse,
   type OptimizeResponse,
 } from "@/lib/optimization"
-import type { Task } from "@/store/planner"
+import type { OptimizeTaskInput } from "@/lib/task-constraints"
 
 const DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -20,7 +20,7 @@ export function createAnthropicClient(): Anthropic {
 
 export async function optimizeDaySchedule(
   events: CalendarEvent[],
-  tasks: Task[],
+  tasks: OptimizeTaskInput[],
   client?: Anthropic
 ): Promise<OptimizeResponse> {
   const anthropic = client ?? createAnthropicClient()

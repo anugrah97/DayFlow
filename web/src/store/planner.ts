@@ -1,10 +1,17 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { TASK_TITLE_MAX_LENGTH } from "@/lib/task-constraints"
 
 export type Priority = "high" | "medium" | "low"
 
-export const TASK_TITLE_MAX_LENGTH = 200
+export {
+  TASK_TITLE_MAX_LENGTH,
+  TASK_MIN_DURATION,
+  TASK_MAX_DURATION,
+} from "@/lib/task-constraints"
+
 export const PLANNER_STORAGE_PREFIX = "dayflow-planner"
+export const PLANNER_STORAGE_PENDING_KEY = "__dayflow_planner_uninitialized__"
 
 export function getPlannerStorageKey(userId: string): string {
   return `${PLANNER_STORAGE_PREFIX}-${userId}`
@@ -70,6 +77,6 @@ export const usePlannerStore = create<PlannerStore>()(
         return { tasks: items }
       }),
     }),
-    { name: PLANNER_STORAGE_PREFIX }
+    { name: PLANNER_STORAGE_PENDING_KEY, skipHydration: true }
   )
 )
