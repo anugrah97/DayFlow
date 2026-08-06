@@ -172,6 +172,8 @@ export default function CalendarPage() {
         <TaskPanel
           suggestions={suggestions}
           onSuggestionsChange={setSuggestions}
+          calendarEvents={calendarEvents}
+          onConflictWarning={setConflictWarning}
         />
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold mb-4">Today</h1>

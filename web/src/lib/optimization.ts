@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@/lib/google-calendar"
-import type { Task } from "@/store/planner"
+import type { OptimizeTaskInput } from "@/lib/task-constraints"
 
 export interface ScheduleSuggestion {
   taskId: string
@@ -31,7 +31,7 @@ Respond with ONLY valid JSON (no markdown fences) in this shape:
   "summary": "<optional one-line overview>"
 }`
 
-export function buildOptimizeUserMessage(events: CalendarEvent[], tasks: Task[]): string {
+export function buildOptimizeUserMessage(events: CalendarEvent[], tasks: OptimizeTaskInput[]): string {
   const eventPayload = events.map((e) => ({
     title: e.title,
     start: e.start,

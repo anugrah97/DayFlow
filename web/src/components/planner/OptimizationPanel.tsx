@@ -3,11 +3,17 @@
 import { useState } from "react"
 import { Sparkles, Loader2 } from "lucide-react"
 import { usePlannerStore, Task } from "@/store/planner"
+import { checkConflict } from "@/lib/conflict"
+import { isWithinGridHours } from "@/lib/grid-position"
+import type { CalendarEvent } from "@/lib/google-calendar"
 import type { ScheduleSuggestion } from "@/lib/optimization"
+import { useShallow } from "zustand/react/shallow"
 
 interface OptimizationPanelProps {
   suggestions: ScheduleSuggestion[]
   onSuggestionsChange: (suggestions: ScheduleSuggestion[]) => void
+  calendarEvents: CalendarEvent[]
+  onConflictWarning: (message: string) => void
 }
 
 function formatSuggestionTime(iso: string): string {
@@ -17,8 +23,11 @@ function formatSuggestionTime(iso: string): string {
 export default function OptimizationPanel({
   suggestions,
   onSuggestionsChange,
+  calendarEvents,
+  onConflictWarning,
 }: OptimizationPanelProps) {
   const tasks = usePlannerStore((s) => s.tasks)
+  const scheduledTasks = usePlannerStore(useShallow((s) => s.tasks.filter((t) => !!t.scheduledAt)))
   const scheduleTask = usePlannerStore((s) => s.scheduleTask)
 
   const [isLoading, setIsLoading] = useState(false)
@@ -68,9 +77,34 @@ export default function OptimizationPanel({
     return tasks.find((t) => t.id === taskId)
   }
 
-  function handleAccept(suggestion: ScheduleSuggestion) {
+  function acceptSuggestion(suggestion: ScheduleSuggestion): boolean {
+    const task = getTask(suggestion.taskId)
+    if (!task) return false
+
+    if (!isWithinGridHours(suggestion.scheduledAt, task.duration)) {
+      onConflictWarning("Tasks can only be scheduled between 7:00 AM and 10:00 PM.")
+      return false
+    }
+
+    const conflict = checkConflict(
+      task,
+      suggestion.scheduledAt,
+      calendarEvents,
+      scheduledTasks,
+      task.id
+    )
+    if (conflict) {
+      onConflictWarning(conflict)
+    }
+
     scheduleTask(suggestion.taskId, suggestion.scheduledAt)
-    onSuggestionsChange(suggestions.filter((s) => s.taskId !== suggestion.taskId))
+    return true
+  }
+
+  function handleAccept(suggestion: ScheduleSuggestion) {
+    if (acceptSuggestion(suggestion)) {
+      onSuggestionsChange(suggestions.filter((s) => s.taskId !== suggestion.taskId))
+    }
   }
 
   function handleDismiss(taskId: string) {
@@ -78,11 +112,16 @@ export default function OptimizationPanel({
   }
 
   function handleAcceptAll() {
+    const remaining: ScheduleSuggestion[] = []
     for (const suggestion of suggestions) {
-      scheduleTask(suggestion.taskId, suggestion.scheduledAt)
+      if (!acceptSuggestion(suggestion)) {
+        remaining.push(suggestion)
+      }
     }
-    onSuggestionsChange([])
-    setSummary(null)
+    onSuggestionsChange(remaining)
+    if (remaining.length === 0) {
+      setSummary(null)
+    }
   }
 
   function handleDismissAll() {
@@ -110,6 +149,11 @@ export default function OptimizationPanel({
           </>
         )}
       </button>
+
+      <p className="text-xs text-slate-500 leading-relaxed">
+        Uses Anthropic Claude. Your today&apos;s calendar events and unscheduled task titles,
+        durations, and priorities are sent to Anthropic to generate suggestions.
+      </p>
 
       {unscheduledTasks.length === 0 && tasks.length > 0 && (
         <p className="text-xs text-slate-500 text-center">All tasks are scheduled</p>

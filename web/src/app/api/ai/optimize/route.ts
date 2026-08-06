@@ -1,17 +1,16 @@
 import { getToken } from "next-auth/jwt"
 import { optimizeDaySchedule } from "@/lib/claude"
 import { getTodaysEvents } from "@/lib/google-calendar"
+import {
+  OPTIMIZE_MAX_BODY_BYTES,
+  sanitizeOptimizeResponse,
+  validateOptimizeTasks,
+} from "@/lib/optimize-validation"
 import { getSafeErrorMessage, rateLimit } from "@/lib/rate-limit"
-import type { Task } from "@/store/planner"
 import { NextRequest, NextResponse } from "next/server"
 
 const RATE_LIMIT = 5
 const RATE_WINDOW_MS = 60_000
-const MAX_TASKS_PER_REQUEST = 50
-
-interface OptimizeRequestBody {
-  tasks: Pick<Task, "id" | "title" | "duration" | "priority">[]
-}
 
 export async function POST(req: NextRequest) {
   const token = await getToken({
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rateLimitKey = `optimize:${token.sub ?? "unknown"}`
-  const limit = rateLimit(rateLimitKey, RATE_LIMIT, RATE_WINDOW_MS)
+  const limit = await rateLimit(rateLimitKey, RATE_LIMIT, RATE_WINDOW_MS)
   if (!limit.success) {
     return NextResponse.json(
       { error: "Too many requests" },
@@ -32,23 +31,36 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: OptimizeRequestBody
+  const contentLength = req.headers.get("content-length")
+  if (contentLength && Number(contentLength) > OPTIMIZE_MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Request body too large" }, { status: 413 })
+  }
+
+  let rawBody: string
   try {
-    body = await req.json()
+    rawBody = await req.text()
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  if (!Array.isArray(body.tasks)) {
-    return NextResponse.json({ error: "tasks array is required" }, { status: 400 })
+  if (rawBody.length > OPTIMIZE_MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Request body too large" }, { status: 413 })
   }
 
-  if (body.tasks.length === 0) {
-    return NextResponse.json({ error: "No tasks to optimize" }, { status: 400 })
+  let body: unknown
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  if (body.tasks.length > MAX_TASKS_PER_REQUEST) {
-    return NextResponse.json({ error: "Too many tasks in request" }, { status: 400 })
+  const taskValidation = validateOptimizeTasks(
+    body && typeof body === "object" && "tasks" in body
+      ? (body as { tasks: unknown }).tasks
+      : undefined
+  )
+  if (!taskValidation.ok) {
+    return NextResponse.json({ error: taskValidation.error }, { status: 400 })
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -60,7 +72,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const events = await getTodaysEvents(token.accessToken as string)
-    const result = await optimizeDaySchedule(events, body.tasks as Task[])
+    const rawResult = await optimizeDaySchedule(events, taskValidation.tasks)
+    const result = sanitizeOptimizeResponse(rawResult, taskValidation.tasks)
     return NextResponse.json(result)
   } catch (error) {
     console.error("AI optimize error:", { message: getSafeErrorMessage(error) })

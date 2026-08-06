@@ -1,31 +1,56 @@
-type Bucket = { count: number; resetAt: number }
+import { Ratelimit } from "@upstash/ratelimit"
+import { Redis } from "@upstash/redis"
+import { inMemoryRateLimit, type RateLimitResult } from "@/lib/rate-limit-memory"
 
-const buckets = new Map<string, Bucket>()
+const ratelimitCache = new Map<string, Ratelimit>()
 
-export interface RateLimitResult {
-  success: boolean
-  retryAfter?: number
+export type { RateLimitResult } from "@/lib/rate-limit-memory"
+
+function getRedisClient(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  return new Redis({ url, token })
+}
+
+function getRatelimiter(limit: number, windowMs: number): Ratelimit | null {
+  const redis = getRedisClient()
+  if (!redis) return null
+
+  const cacheKey = `${limit}:${windowMs}`
+  const cached = ratelimitCache.get(cacheKey)
+  if (cached) return cached
+
+  const ratelimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(limit, `${windowMs} ms`),
+    prefix: "dayflow:ratelimit",
+  })
+  ratelimitCache.set(cacheKey, ratelimiter)
+  return ratelimiter
 }
 
 /**
- * Simple in-memory sliding-window rate limiter (per-process).
- * Suitable for single-instance deployments; use Redis for multi-instance.
+ * Distributed rate limiter using Upstash Redis when configured.
+ * Falls back to in-memory limiting for local development.
  */
-export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
-  const now = Date.now()
-  const bucket = buckets.get(key)
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const ratelimiter = getRatelimiter(limit, windowMs)
+  if (!ratelimiter) {
+    return inMemoryRateLimit(key, limit, windowMs)
+  }
 
-  if (!bucket || now >= bucket.resetAt) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs })
+  const result = await ratelimiter.limit(key)
+  if (result.success) {
     return { success: true }
   }
 
-  if (bucket.count >= limit) {
-    return { success: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) }
-  }
-
-  bucket.count += 1
-  return { success: true }
+  const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))
+  return { success: false, retryAfter }
 }
 
 export function getSafeErrorMessage(error: unknown): string {
