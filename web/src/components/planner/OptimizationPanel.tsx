@@ -3,10 +3,9 @@
 import { useState } from "react"
 import { Sparkles, Loader2 } from "lucide-react"
 import { usePlannerStore, Task } from "@/store/planner"
-import { checkConflict } from "@/lib/conflict"
-import { isWithinGridHours } from "@/lib/grid-position"
 import type { CalendarEvent } from "@/lib/google-calendar"
 import type { ScheduleSuggestion } from "@/lib/optimization"
+import { tryScheduleTask } from "@/lib/schedule-task"
 import { useShallow } from "zustand/react/shallow"
 
 interface OptimizationPanelProps {
@@ -81,20 +80,20 @@ export default function OptimizationPanel({
     const task = getTask(suggestion.taskId)
     if (!task) return false
 
-    if (!isWithinGridHours(suggestion.scheduledAt, task.duration)) {
-      onConflictWarning("Tasks can only be scheduled between 7:00 AM and 10:00 PM.")
-      return false
-    }
-
-    const conflict = checkConflict(
+    const result = tryScheduleTask(
       task,
       suggestion.scheduledAt,
       calendarEvents,
-      scheduledTasks,
-      task.id
+      scheduledTasks
     )
-    if (conflict) {
-      onConflictWarning(conflict)
+
+    if (!result.scheduled) {
+      onConflictWarning(result.warning ?? "Unable to schedule task.")
+      return false
+    }
+
+    if (result.warning) {
+      onConflictWarning(result.warning)
     }
 
     scheduleTask(suggestion.taskId, suggestion.scheduledAt)

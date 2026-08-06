@@ -12,8 +12,8 @@ import type { ScheduleSuggestion } from "@/lib/optimization"
 import SuggestedTaskBlock from "@/components/calendar/SuggestedTaskBlock"
 import { useShallow } from "zustand/react/shallow"
 import { GRID_START_HOUR, GRID_END_HOUR, HOUR_HEIGHT } from "@/components/calendar/TimeGrid"
-import { checkConflict } from "@/lib/conflict"
-import { isWithinGridHours } from "@/lib/grid-position"
+import { resolveDragEndAction } from "@/lib/drag-end"
+import { tryScheduleTask } from "@/lib/schedule-task"
 
 // ---------------------------------------------------------------------------
 // Build ISO slot time for today
@@ -109,14 +109,13 @@ export default function CalendarPage() {
   }, [])
 
   function scheduleTaskAtSlot(task: Task, slotTime: string) {
-    if (!isWithinGridHours(slotTime, task.duration)) {
-      setConflictWarning("Tasks can only be scheduled between 7:00 AM and 10:00 PM.")
+    const result = tryScheduleTask(task, slotTime, calendarEvents, scheduledTasks)
+    if (!result.scheduled) {
+      setConflictWarning(result.warning)
       return
     }
-
-    const conflict = checkConflict(task, slotTime, calendarEvents, scheduledTasks, task.id)
-    if (conflict) {
-      setConflictWarning(conflict)
+    if (result.warning) {
+      setConflictWarning(result.warning)
     }
     usePlannerStore.getState().scheduleTask(task.id, slotTime)
   }
@@ -124,19 +123,20 @@ export default function CalendarPage() {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveDragTask(null)
-    if (!over) return
 
     const task = active.data.current?.task as Task | undefined
-    const slotTime = over.data.current?.slotTime as string | undefined
+    const action = resolveDragEndAction(
+      String(active.id),
+      task,
+      over?.data.current as { slotTime?: string; task?: Task } | undefined
+    )
 
-    if (task && slotTime) {
-      scheduleTaskAtSlot(task, slotTime)
+    if (action.type === "schedule") {
+      scheduleTaskAtSlot(action.task, action.slotTime)
       return
     }
-
-    const overTask = over.data.current?.task as Task | undefined
-    if (task && overTask && active.id !== over.id) {
-      usePlannerStore.getState().reorderTasks(String(active.id), String(over.id))
+    if (action.type === "reorder") {
+      usePlannerStore.getState().reorderTasks(action.activeId, action.overId)
     }
   }
 
